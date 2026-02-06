@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream - Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="top-bar">
+        <div class="logo">STREAM</div>
+        <button onclick="localStorage.clear(); location.reload();" style="background:none; border:1px solid #333; color:#555; font-size:10px;">RESET FEED</button>
+    </header>
+
+    <main id="videoFeed">
+        </main>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item active"><i>🏠</i>Home</a>
+        <a href="upload.html" class="nav-item"><i>➕</i>Upload</a>
+    </nav>
+
+    <script>
+        // 1. Function to draw the videos on screen
+function renderFeed() {
+    const feed = document.getElementById('videoFeed');
+    const videos = JSON.parse(localStorage.getItem('videos')) || [];
+    
+    feed.innerHTML = videos.map(v => `
+        <div class="video-card" onclick="goToVideo(${v.id}, ${v.isCustom})">
+            <div class="thumb-container">
+                <img src="${v.thumb}" class="thumbnail">
+                <div class="play-overlay">
+                    <div class="play-triangle"></div>
+                </div>
+            </div>
+            <div class="video-info">
+                <h2>${v.title}</h2>
+                <p>Director's Cut • Just now</p>
+            </div>
+        </div>
+    `).join('');
+
+    // Start the animation loop for any "sequence" thumbnails
+    startPreviews();
+}
+
+function startPreviews() {
+    const images = document.querySelectorAll('.preview-sequence');
+    images.forEach(img => {
+        const frames = JSON.parse(img.dataset.frames);
+        let currentFrame = 0;
+        setInterval(() => {
+            currentFrame = (currentFrame + 1) % frames.length;
+            img.src = frames[currentFrame];
+        }, 800); // Change image every 0.8 seconds
+    });
+}
+
+        // 2. Logic to handle clicking a video
+        function goToVideo(id, isCustom) {
+            if (isCustom) {
+                // Redirect to the special player page
+                window.location.href = 'upload.html?play=true';
+            } else {
+                alert("This is a sample video placeholder.");
+            }
+        }
+
+        // 3. MANDATORY CALL: This runs as soon as the page opens
+        document.addEventListener('DOMContentLoaded', renderFeed);
+    </script>
+</body>
+</html>

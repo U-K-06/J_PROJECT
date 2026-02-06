@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Player</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="video-container">
+        <video id="mainPlayer" controls autoplay playsinline muted style="width:100%;"></video>
+    </div>
+
+    <div class="video-details">
+        <h2 id="vidTitle">Loading...</h2>
+        <p>105 views • Just now</p>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><i>🏠</i>Home</a>
+        <a href="upload.html" class="nav-item"><i>➕</i>Upload</a>
+    </nav>
+
+    <script>
+        // Use window.onload to make sure the "mainPlayer" exists before we talk to it
+        window.onload = function() {
+            const player = document.getElementById('mainPlayer');
+            const titleDisplay = document.getElementById('vidTitle');
+            
+            const customData = sessionStorage.getItem('shotVideo');
+            const params = new URLSearchParams(window.location.search);
+
+            if (params.get('custom') === 'true' && customData) {
+                const data = JSON.parse(customData);
+                titleDisplay.innerText = data.title;
+                
+                // Feed the data string directly into the player
+                player.src = data.content;
+                player.load();
+            } else {
+                // Fallback for demo
+                titleDisplay.innerText = "Sample Video";
+                player.src = "https://www.w3schools.com/html/mov_bbb.mp4";
+            }
+        };
+    </script>
+</body>
+</html>

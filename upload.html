@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream App</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #playerView, #loadingView, #previewContainer { display: none; }
+        
+        /* THE CIRCULAR LOADER */
+        .loading-screen { text-align: center; padding: 80px 20px; }
+        .loader-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+        }
+        .circle-bg { fill: none; stroke: #222; stroke-width: 8; }
+        .circle-progress {
+            fill: none;
+            stroke: #FF8C00;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 2s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        /* THE TICK ANIMATION */
+        .checkmark {
+            display: none;
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            stroke: #4BB543;
+            stroke-width: 6;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: drawCheck 0.5s ease-in-out forwards;
+        }
+        @keyframes drawCheck { to { stroke-dashoffset: 0; } }
+
+        /* PREVIEW STYLING */
+        #previewVideo { width: 100%; border-radius: 12px; margin-top: 15px; background: #000; }
+    </style>
+</head>
+<body>
+
+    <div id="uploadView">
+        <header class="top-bar"><div class="logo">UPLOAD</div></header>
+        <form class="upload-form" id="propForm">
+            <label id="dropZone" for="vFile" style="border: 2px dashed #FF8C00; padding: 40px; text-align: center; border-radius: 12px; display: block;">
+                <p>📁 SELECT VIDEO</p>
+                <input type="file" id="vFile" accept="video/*" style="display: none;" required>
+            </label>
+
+            <div id="previewContainer">
+                <p style="font-size: 12px; color: #FF8C00; margin-bottom: 5px;">PREVIEW:</p>
+                <video id="previewVideo" muted></video>
+                <p style="text-align: center; font-size: 10px; color: #666; margin-top: 5px;">Tap Publish to continue</p>
+            </div>
+
+            <input type="text" id="vTitle" placeholder="Video Title..." required style="width:100%; margin-top:20px;">
+            <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px;">PUBLISH</button>
+        </form>
+    </div>
+
+    <div id="loadingView" class="loading-screen">
+        <div class="loader-wrapper">
+            <svg width="100" height="100">
+                <circle class="circle-bg" cx="50" cy="50" r="45" />
+                <circle id="progressCircle" class="circle-progress" cx="50" cy="50" r="45" />
+            </svg>
+            <svg class="checkmark" id="checkIcon" viewBox="0 0 52 52">
+                <path fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+        </div>
+        <h2 id="statusLabel">UPLOADING...</h2>
+    </div>
+
+    <div id="playerView">
+        <div class="video-container">
+            <video id="mainPlayer" controls autoplay playsinline muted style="width:100%;"></video>
+        </div>
+        <div class="video-details">
+            <h2 id="displayTitle" style="color: #FF8C00; padding: 15px;"></h2>
+            <p style="padding: 0 15px; color: #aaa;">1 view • Just now</p>
+        </div>
+        <button onclick="window.location.href='index.html'" class="btn-primary" style="margin:20px; background:#222;">← BACK TO FEED</button>
+    </div>
+    <script>
+    const fileInput = document.getElementById('vFile');
+    const previewVideo = document.getElementById('previewVideo');
+    const previewContainer = document.getElementById('previewContainer');
+    const dropZone = document.getElementById('dropZone');
+
+    // 1. VIDEO PREVIEW (Works for the actor to see their choice)
+    fileInput.onchange = () => {
+        const file = fileInput.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            previewVideo.src = url;
+            dropZone.style.display = 'none';
+            previewContainer.style.display = 'block';
+            previewVideo.play();
+        }
+    };
+
+async function captureThumb(videoUrl) {
+    return new Promise((resolve) => {
+        const v = document.createElement('video');
+        v.src = videoUrl;
+        v.muted = true;
+        v.onloadeddata = () => { v.currentTime = 1.5; }; // Jump to 1.5s
+        v.onseeked = () => {
+            setTimeout(() => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 360;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(v, 0, 0, 640, 360);
+                // 0.8 quality is nice and crisp for 360p
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            }, 500);
+        };
+        setTimeout(() => resolve("https://picsum.photos/id/237/640/360"), 4000);
+    });
+}
+
+    // 3. MAIN UPLOAD FLOW
+    document.getElementById('propForm').onsubmit = async function(e) {
+        e.preventDefault();
+        
+        const videoFile = fileInput.files[0];
+        const videoURL = URL.createObjectURL(videoFile);
+
+        // UI Transition
+        document.getElementById('uploadView').style.display = 'none';
+        document.getElementById('loadingView').style.display = 'block';
+
+        // Start Circle Animation
+        const circle = document.getElementById('progressCircle');
+        setTimeout(() => { circle.style.strokeDashoffset = "0"; }, 100);
+
+        // CAPTURE THUMBNAIL DURING LOADING
+        // We do this while the circle is spinning so the user doesn't wait extra time
+        const thumb = await captureThumb(videoURL);
+
+        setTimeout(() => {
+            // Show Success UI
+            document.getElementById('statusLabel').innerText = "SUCCESS!";
+            document.getElementById('statusLabel').style.color = "#4BB543";
+            document.getElementById('checkIcon').style.display = "block";
+            
+            // SAVE TO STORAGE
+            const newVideo = { 
+                id: Date.now(), 
+                title: document.getElementById('vTitle').value, 
+                thumb: thumb, // The captured frame
+                isCustom: true 
+            };
+            
+            const videos = JSON.parse(localStorage.getItem('videos')) || [];
+            videos.unshift(newVideo);
+            localStorage.setItem('videos', JSON.stringify(videos));
+            sessionStorage.setItem('tempVideoFile', videoURL);
+
+            // Final jump to player
+            setTimeout(() => {
+                document.getElementById('loadingView').style.display = 'none';
+                document.getElementById('playerView').style.display = 'block';
+                document.getElementById('displayTitle').innerText = newVideo.title;
+                const player = document.getElementById('mainPlayer');
+                player.src = videoURL;
+                player.play();
+            }, 1200);
+        }, 2500); 
+    };
+
+    // 4. PERSISTENCE LOGIC (For coming back from Home Feed)
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('play') === 'true') {
+            const url = sessionStorage.getItem('tempVideoFile');
+            const videos = JSON.parse(localStorage.getItem('videos')) || [];
+            if (url && videos.length > 0) {
+                document.getElementById('uploadView').style.display = 'none';
+                document.getElementById('playerView').style.display = 'block';
+                // Find the custom video entry
+                const customVid = videos.find(v => v.isCustom);
+                document.getElementById('displayTitle').innerText = customVid ? customVid.title : "Uploaded Video";
+                document.getElementById('mainPlayer').src = url;
+            }
+        }
+    };
+</script>
+</body>
+</html>
